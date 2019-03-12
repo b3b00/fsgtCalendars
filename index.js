@@ -1,14 +1,9 @@
 const cheerio = require('cheerio');
-var request = require('request');
+//var request = require('request');
+var request = require('sync-request');
 const fs = require('fs');
 
-var groupe = "f";
-var groupe_url = "http://t2t.29.fsgt.org/groupe/groupe-" + groupe
-
-var calFile = "";
-
-// the complete match list
-matcheArray = Array();
+var groupe_url_schema = "http://t2t.29.fsgt.org/groupe/groupe";
 
 /*
 * format match name
@@ -31,7 +26,7 @@ var matchDate = function (match) {
         parseInt(parts[1], 10) - 1,
         parseInt(parts[0], 10));
 
-    var dateStr = parts[2] + "" + parts[1] + "" + parts[0] + "T";
+    dateStr = parts[2] + "" + parts[1] + "" + parts[0] + "T";
 
     return dateStr;
 }
@@ -54,9 +49,16 @@ var matchEvent = function (match) {
 /*
 * write ics file for a team
 */
-var jsonToCal = function (matches, team) {
+var jsonToCal = function (matches, group, team) {
 
-    calFile = team.replace(" ", "").toLocaleLowerCase() + ".ics"
+    calFile = group + "/" + team.replace(" ", "").toLocaleLowerCase() + ".ics"
+
+    dir = './' + group;
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+
     fs.writeFileSync(calFile, "BEGIN:VCALENDAR\r\n");
     fs.appendFileSync(calFile, "VERSION:2.0\r\n");
     for (l = 0; l < matches.length; l++) {
@@ -78,7 +80,7 @@ getTeams = function (html) {
     htmlteams = content('div#classement table tr td.nom')
     for (i = 0; i < htmlteams.length; i++) {
         team = htmlteams[i];
-        name = team.childNodes[0].data;        
+        name = team.childNodes[0].data;
         teams.push(name);
     }
     return teams;
@@ -87,13 +89,13 @@ getTeams = function (html) {
 /*
 * get the matches
 */
-getMatches = function(html) {
+getMatches = function (html) {
     content = cheerio.load(html);
     matches = content('div#matchs table.matchs tr.match')
     matchArray = Array();
 
     for (i = 0; i < matches.length; i++) {
-        day = matches[i];        
+        day = matches[i];
         chs = day.children;
         k = 0;
         match = {}
@@ -102,26 +104,55 @@ getMatches = function(html) {
             if (child.type == "tag" && child.name == "td") {
                 switch (k) {
                     case 0: {
-                        match["day"] = child.childNodes[0].data;
+                        if (child.childNodes[0] != undefined && child.childNodes[0] != null ) {
+                            match["day"] = child.childNodes[0].data;
+                        }
+                        else {
+                            j = j++;
+                            match = null;
+                        }
                         break;
                     }
                     case 1: {
-                        match["date"] = child.childNodes[0].data;
+                        if (child.childNodes[0] != undefined && child.childNodes[0] != null ) {
+                            match["date"] = child.childNodes[0].data;
+                        }
+                        else {
+                            j = j++;
+                            match = null;
+                        }
                         break;
                     }
                     case 5: {
-                        match["local"] = child.childNodes[0].data;
+                        if (child.childNodes[0] != undefined && child.childNodes[0] != null ) {
+                            match["local"] = child.childNodes[0].data;
+                        }
+                        else {
+                            j = j++;
+                            match = null;
+                        }
                         break;
                     }
                     case 8: {
-                        match["remote"] = child.childNodes[0].data;
+                        if (child.childNodes[0] != undefined && child.childNodes[0] != null ) {
+                            match["remote"] = child.childNodes[0].data;
+                        }
+                        else {
+                            j = j++;
+                            match = null;
+                        }
                         break;
                     }
+                }
+                if (match == null) {
+                    break;
                 }
                 k++;
             }
         }
-        matchArray.push(match);
+        if (match != null) {
+            matchArray.push(match);
+        }
     }
     return matchArray;
 }
@@ -130,15 +161,48 @@ getMatches = function(html) {
 /*
 * main call
 */
-request.get(groupe_url, (error, response, html) => {
 
-    teams = getTeams(html);
+groups = ["a", "b", "c", "d", "e", "f", "g"];
 
-    matchArray = getMatches(html);
 
-    for (t = 0 ; t < teams.length; t++) {
-        jsonToCal(matchArray,teams[t]);
+downloadGroup = function (group) {
+    url = groupe_url_schema +"-"+group
+
+    
+    if (group == "a") {
+        url = groupe_url_schema;
+        ;
     }
 
+    res = request("GET",url);
+    
+    if (res.statusCode  == 200) {
+        html = res.getBody();
+
+    //request.getSync(url, (error, response, html) => {
+
+
+       
+        teams = getTeams(html);
+
+        matchArray = getMatches(html);
+
+        for (t = 0; t < teams.length; t++) {
+            jsonToCal(matchArray, group, teams[t]);
+        }
+
+    }
+    else {
+        console.log("error on ("+group+") : "+url);
+    }
+    //}
+    ;
 }
-);
+
+for (g = 0; g < groups.length; g++) {
+
+    group = groups[g];
+    downloadGroup(group);
+
+}
+
