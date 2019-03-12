@@ -96,6 +96,38 @@ const scrapper = {
         return teams;
     },
 
+
+    extractMatchFromRow(row) {
+
+        mapping = {
+            "0" : "day",
+            "1" : "date",
+            "5" : "local",
+            "8" : "remote"
+        }
+
+        chs = row.children;
+        match = {}
+
+        for (j = 0; j < chs.length; j++) {
+            child = chs[j];
+            if (child.type == "tag" && child.name == "td") {
+                if (!(mapping[""+k] == undefined)) {
+                    if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
+                        match[mapping[""+k]] = child.childNodes[0].data;
+                    }
+                    else {
+                        j = j++;
+                        match = null;       
+                        return null;                 
+                    }
+                }
+                k++;
+            }            
+        }
+        return match;
+    },
+
     /*
     * get the matches
     */
@@ -109,57 +141,9 @@ const scrapper = {
             chs = day.children;
             k = 0;
             match = {}
-            for (j = 0; j < chs.length; j++) {
-                child = chs[j];
-                if (child.type == "tag" && child.name == "td") {
-                    switch (k) {
-                        case 0: {
-                            if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
-                                match["day"] = child.childNodes[0].data;
-                            }
-                            else {
-                                j = j++;
-                                match = null;
-                            }
-                            break;
-                        }
-                        case 1: {
-                            if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
-                                match["date"] = child.childNodes[0].data;
-                            }
-                            else {
-                                j = j++;
-                                match = null;
-                            }
-                            break;
-                        }
-                        case 5: {
-                            if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
-                                match["local"] = child.childNodes[0].data;
-                            }
-                            else {
-                                j = j++;
-                                match = null;
-                            }
-                            break;
-                        }
-                        case 8: {
-                            if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
-                                match["remote"] = child.childNodes[0].data;
-                            }
-                            else {
-                                j = j++;
-                                match = null;
-                            }
-                            break;
-                        }
-                    }
-                    if (match == null) {
-                        break;
-                    }
-                    k++;
-                }
-            }
+
+            match = this.extractMatchFromRow(day) 
+
             if (match != null) {
                 matchArray.push(match);
             }
