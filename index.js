@@ -51,9 +51,15 @@ var matchEvent = function (match) {
 */
 var jsonToCal = function (matches, group, team) {
 
-    calFile = group + "/" + team.replace(" ", "").toLocaleLowerCase() + ".ics"
+    calFile = "calendars/"+group + "/" + team.replace(" ", "").toLocaleLowerCase() + ".ics"
 
-    dir = './' + group;
+    dir = './calendars'
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+
+    dir = './calendars/' + group;
 
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir);
