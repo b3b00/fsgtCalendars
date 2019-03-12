@@ -208,6 +208,7 @@ downloadGroup = function (group) {
 for (g = 0; g < groups.length; g++) {
 
     group = groups[g];
+    console.log("donwloading calendar for group ["+group+"]");
     downloadGroup(group);
 
 }
