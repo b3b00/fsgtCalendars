@@ -41,14 +41,14 @@ var matchDate = function (match) {
 * write a match event to ics file
 */
 var matchEvent = function (match) {
-    fs.appendFile(calFile, "BEGIN:VEVENT\n");
+    fs.appendFileSync(calFile, "\r\nBEGIN:VEVENT\r\n");
     date = matchDate(match);
-    fs.appendFile(calFile, "DTSTART:" + date + "203000Z\n");
-    fs.appendFile(calFile, "DTEND:" + date + "220000Z\n");
+    fs.appendFileSync(calFile, "DTSTART:" + date + "203000Z\r\n");
+    fs.appendFileSync(calFile, "DTEND:" + date + "220000Z\r\n");
     lbl = matchLabel(match);
-    fs.appendFile(calFile, "SUMMARY:" + lbl + "\n");
-    fs.appendFile(calFile, "DESCRIPTION:" + lbl + "\n");
-    fs.appendFile(calFile, "END:VEVENT\n");
+    fs.appendFileSync(calFile, "SUMMARY:" + lbl + "\r\n");
+    fs.appendFileSync(calFile, "DESCRIPTION:" + lbl + "\r\n");
+    fs.appendFileSync(calFile, "END:VEVENT\r\n");
 }
 
 /*
@@ -57,15 +57,15 @@ var matchEvent = function (match) {
 var jsonToCal = function (matches, team) {
 
     calFile = team.replace(" ", "").toLocaleLowerCase() + ".ics"
-    fs.writeFile(calFile, "BEGIN:VCALENDAR\n");
-    fs.appendFile(calFile, "VERSION:2.0\n");
+    fs.writeFileSync(calFile, "BEGIN:VCALENDAR\r\n");
+    fs.appendFileSync(calFile, "VERSION:2.0\r\n");
     for (l = 0; l < matches.length; l++) {
         m = matches[l];
         if (m.local == team || m.remote == team) {
             matchEvent(m);
         }
     }
-    fs.appendFile(calFile, "END:VCALENDAR\n");
+    fs.appendFileSync(calFile, "END:VCALENDAR\r\n");
 }
 
 
