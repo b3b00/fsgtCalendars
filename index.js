@@ -90,7 +90,7 @@ const scrapper = {
     * value to attibuteName attribute in the resulting object.
     * Usefull to selectively extract data from a row to an object.
     */
-    extractInnerTagsValueToObject: function (tagName, mapping, node) {
+    extractInnerTagsValueToObject: function (tagName, mapping, node, acceptMissingItems) {
         object = {}
 
         chs = node.childNodes;
@@ -104,8 +104,10 @@ const scrapper = {
                     }
                     else {
                         j = j++;
-                        object = null;
-                        return null;
+                        if (!acceptMissingItems) {
+                            object = null;
+                            return null;
+                        }
                     }
                 }
                 k++;
@@ -149,7 +151,7 @@ const fsgtScrapper = {
             "8": "remote"
         }
 
-        match = scrapper.extractInnerTagsValueToObject("td", mapping, row);
+        match = scrapper.extractInnerTagsValueToObject("td", mapping, row,false);
 
         return match;
     },
