@@ -11,7 +11,7 @@ const iCalendarGeneration = {
     /*
     * format match name
     */
-    getMatchLabel: function (match) {
+    getMatchLabel: function (match,team) {
         if (match.local == team) {
             return match.day.replace("\t", "") + " " + match.remote.replace("\t", "") + " (dom.)";
         }
@@ -23,7 +23,7 @@ const iCalendarGeneration = {
     /*
     * format match date 
     */
-    getMatchDate: function (match) {
+    getMatchDate: function (match,team) {
         parts = match.date.split("/");
 
         dateStr = parts[2] + "" + parts[1] + "" + parts[0] + "T";
@@ -35,12 +35,12 @@ const iCalendarGeneration = {
     /*
     * write a match event to ics file
     */
-    getMatchEvent: function (match) {
+    getMatchEvent: function (match,team) {
         fs.appendFileSync(calFile, "\r\nBEGIN:VEVENT\r\n");
-        date = this.getMatchDate(match);
+        date = this.getMatchDate(match,team);
         fs.appendFileSync(calFile, "DTSTART:" + date + "203000Z\r\n");
         fs.appendFileSync(calFile, "DTEND:" + date + "220000Z\r\n");
-        lbl = this.getMatchLabel(match);
+        lbl = this.getMatchLabel(match,team);
         fs.appendFileSync(calFile, "SUMMARY:" + lbl + "\r\n");
         fs.appendFileSync(calFile, "DESCRIPTION:" + lbl + "\r\n");
         fs.appendFileSync(calFile, "END:VEVENT\r\n");
@@ -70,7 +70,7 @@ const iCalendarGeneration = {
         for (l = 0; l < matches.length; l++) {
             m = matches[l];
             if (m.local == team || m.remote == team) {
-                this.getMatchEvent(m);
+                this.getMatchEvent(m,team);
             }
         }
         fs.appendFileSync(calFile, "END:VCALENDAR\r\n");
@@ -82,8 +82,14 @@ const iCalendarGeneration = {
 const scrapper = {
 
 
-
-
+    /*
+    * from a node (node) extract all child node with name == tagName
+    * apply mapping to create an object :
+    * mmaping is an associative map int -> attribute name.
+    * for each mapping i -> attributeName: select the ith child node and extract 
+    * value to attibuteName attribute in the resulting object.
+    * Usefull to selectively extract data from a row to an object.
+    */
     extractInnerTagsValueToObject: function (tagName, mapping, node) {
         object = {}
 
@@ -106,7 +112,21 @@ const scrapper = {
             }
         }
         return object;
+    },
+
+    etxractdataFromNodeArray : function(html, selector) {
+        values = Array();
+        content = cheerio.load(html);
+        nodes = content(selector)
+        for (i = 0; i < nodes.length; i++) {
+            node = nodes[i];
+            name = node.childNodes[0].data;
+            values.push(name);
+        }
+        return values;
     }
+
+
 }
 
 const fsgtScrapper = {
@@ -115,15 +135,8 @@ const fsgtScrapper = {
     /*
     * get the teams
     */
-    getTeams: function (html) {
-        teams = Array();
-        content = cheerio.load(html);
-        htmlteams = content('div#classement table tr td.nom')
-        for (i = 0; i < htmlteams.length; i++) {
-            team = htmlteams[i];
-            name = team.childNodes[0].data;
-            teams.push(name);
-        }
+    getTeams: function (html) {        
+        teams = scrapper.etxractdataFromNodeArray(html,'div#classement table tr td.nom');
         return teams;
     },
 
@@ -138,22 +151,6 @@ const fsgtScrapper = {
 
         match = scrapper.extractInnerTagsValueToObject("td", mapping, row);
 
-        // for (j = 0; j < chs.length; j++) {
-        //     child = chs[j];
-        //     if (child.type == "tag" && child.name == "td") {
-        //         if (!(mapping[""+k] == undefined)) {
-        //             if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
-        //                 match[mapping[""+k]] = child.childNodes[0].data;
-        //             }
-        //             else {
-        //                 j = j++;
-        //                 match = null;       
-        //                 return null;                 
-        //             }
-        //         }
-        //         k++;
-        //     }            
-        // }
         return match;
     },
 
