@@ -11,7 +11,7 @@ const iCalendarGeneration = {
     /*
     * format match name
     */
-    getMatchLabel : function (match) {
+    getMatchLabel: function (match) {
         if (match.local == team) {
             return match.day.replace("\t", "") + " " + match.remote.replace("\t", "") + " (dom.)";
         }
@@ -23,7 +23,7 @@ const iCalendarGeneration = {
     /*
     * format match date 
     */
-    getMatchDate : function (match) {
+    getMatchDate: function (match) {
         parts = match.date.split("/");
 
         dateStr = parts[2] + "" + parts[1] + "" + parts[0] + "T";
@@ -35,7 +35,7 @@ const iCalendarGeneration = {
     /*
     * write a match event to ics file
     */
-    getMatchEvent : function (match) {
+    getMatchEvent: function (match) {
         fs.appendFileSync(calFile, "\r\nBEGIN:VEVENT\r\n");
         date = this.getMatchDate(match);
         fs.appendFileSync(calFile, "DTSTART:" + date + "203000Z\r\n");
@@ -49,7 +49,7 @@ const iCalendarGeneration = {
     /*
     * write ics file for a team
     */
-    writeCalendar : function (matches, group, team) {
+    writeCalendar: function (matches, group, team) {
 
         calFile = "calendars/" + group + "/" + team.replace(" ", "").toLocaleLowerCase() + ".ics"
 
@@ -81,10 +81,41 @@ const iCalendarGeneration = {
 
 const scrapper = {
 
+
+
+
+    extractInnerTagsValueToObject: function (tagName, mapping, node) {
+        object = {}
+
+        chs = node.childNodes;
+
+        for (j = 0; j < chs.length; j++) {
+            child = chs[j];
+            if (child.type == "tag" && child.name == tagName) {
+                if (!(mapping["" + k] == undefined)) {
+                    if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
+                        object[mapping["" + k]] = child.childNodes[0].data;
+                    }
+                    else {
+                        j = j++;
+                        object = null;
+                        return null;
+                    }
+                }
+                k++;
+            }
+        }
+        return object;
+    }
+}
+
+const fsgtScrapper = {
+
+
     /*
     * get the teams
     */
-    getTeams : function (html) {
+    getTeams: function (html) {
         teams = Array();
         content = cheerio.load(html);
         htmlteams = content('div#classement table tr td.nom')
@@ -96,42 +127,40 @@ const scrapper = {
         return teams;
     },
 
-
-    extractMatchFromRow(row) {
+    extractMatchFromRow: function (row) {
 
         mapping = {
-            "0" : "day",
-            "1" : "date",
-            "5" : "local",
-            "8" : "remote"
+            "0": "day",
+            "1": "date",
+            "5": "local",
+            "8": "remote"
         }
 
-        chs = row.children;
-        match = {}
+        match = scrapper.extractInnerTagsValueToObject("td", mapping, row);
 
-        for (j = 0; j < chs.length; j++) {
-            child = chs[j];
-            if (child.type == "tag" && child.name == "td") {
-                if (!(mapping[""+k] == undefined)) {
-                    if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
-                        match[mapping[""+k]] = child.childNodes[0].data;
-                    }
-                    else {
-                        j = j++;
-                        match = null;       
-                        return null;                 
-                    }
-                }
-                k++;
-            }            
-        }
+        // for (j = 0; j < chs.length; j++) {
+        //     child = chs[j];
+        //     if (child.type == "tag" && child.name == "td") {
+        //         if (!(mapping[""+k] == undefined)) {
+        //             if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
+        //                 match[mapping[""+k]] = child.childNodes[0].data;
+        //             }
+        //             else {
+        //                 j = j++;
+        //                 match = null;       
+        //                 return null;                 
+        //             }
+        //         }
+        //         k++;
+        //     }            
+        // }
         return match;
     },
 
     /*
     * get the matches
     */
-    getMatches : function (html) {
+    getMatches: function (html) {
         content = cheerio.load(html);
         matches = content('div#matchs table.matchs tr.match')
         matchArray = Array();
@@ -142,7 +171,7 @@ const scrapper = {
             k = 0;
             match = {}
 
-            match = this.extractMatchFromRow(day) 
+            match = this.extractMatchFromRow(day)
 
             if (match != null) {
                 matchArray.push(match);
@@ -162,7 +191,7 @@ groups = ["a", "b", "c", "d", "e", "f", "g"];
 
 downloadGroup = function (group) {
     url = groupe_url_schema + "-" + group
-    
+
 
     if (group == "a") {
         url = groupe_url_schema;
@@ -178,9 +207,9 @@ downloadGroup = function (group) {
 
 
 
-        teams = scrapper.getTeams(html);
+        teams = fsgtScrapper.getTeams(html);
 
-        matchArray = scrapper.getMatches(html);
+        matchArray = fsgtScrapper.getMatches(html);
 
         for (t = 0; t < teams.length; t++) {
             iCalendarGeneration.writeCalendar(matchArray, group, teams[t]);
