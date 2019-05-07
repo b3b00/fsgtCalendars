@@ -58,7 +58,7 @@ const iCalendarGeneration = {
     * format match name
     */
     getMatchLabel: function (match,team) {
-        if (match.local == team) {
+        if (match.local == team.Name) {
             return match.day.replace("\t", "") + " " + match.remote.replace("\t", "") + " (dom.)";
         }
         else {
