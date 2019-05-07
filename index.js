@@ -1,4 +1,5 @@
 const cheerio = require('cheerio');
+const moment = require('moment');
 
 const request = require('sync-request');
 const fs = require('fs');
@@ -6,6 +7,50 @@ const fs = require('fs');
 const groupe_url_schema = "http://t2t.29.fsgt.org/groupe/groupe";
 
 const team_url_schema = "http://t2t.29.fsgt.org/equipe";
+
+// http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
+
+/* utf.js - UTF-8 <=> UTF-16 convertion
+ *
+ * Copyright (C) 1999 Masanao Izumo <iz@onicos.co.jp>
+ * Version: 1.0
+ * LastModified: Dec 25 1999
+ * This library is free.  You can redistribute it and/or modify it.
+ */
+
+const Utf8ArrayToStr = function (array) {
+    var out, i, len, c;
+    var char2, char3;
+  
+    out = "";
+    len = array.length;
+    i = 0;
+    while (i < len) {
+      c = array[i++];
+      switch (c >> 4)
+      { 
+        case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+          // 0xxxxxxx
+          out += String.fromCharCode(c);
+          break;
+        case 12: case 13:
+          // 110x xxxx   10xx xxxx
+          char2 = array[i++];
+          out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+          break;
+        case 14:
+          // 1110 xxxx  10xx xxxx  10xx xxxx
+          char2 = array[i++];
+          char3 = array[i++];
+          out += String.fromCharCode(((c & 0x0F) << 12) |
+                                     ((char2 & 0x3F) << 6) |
+                                     ((char3 & 0x3F) << 0));
+          break;
+      }
+    }    
+    return out;
+  }
+
 
 const iCalendarGeneration = {
 
@@ -21,14 +66,48 @@ const iCalendarGeneration = {
         }
     },
 
+
+    getTeam: function(teams,teamName) {
+        for(let i = 0;i < teams.length; i++) {
+            if (teams[i].Name == teamName) {
+                return teams[i]
+            }
+        }
+        return null;
+    },
+
+
+    getLocalTeamWeekDay : function(day) {
+        let mapping = {
+            'lundi' : 0,
+            'mardi' : 1,
+            'mercredi' : 2,
+            'jeudi' : 3,
+            'vendredi' : 4,
+            'samedi' :  5,
+            'dimanche' : 6
+        }
+        return mapping[day];
+    },
+
     /*
     * format match date 
     */
-    getMatchDate: function (match,team) {
-        let parts = match.date.split("/");
+    getMatchDate: function (match,teams) {
+        
+        let localTeam = this.getTeam(teams,match.local);
+        let d = moment(match.date, "DD/MM/YYYY");
+        let dayInWeek = d.weekday();
+        let localTeamDay = this.getLocalTeamWeekDay(localTeam.Day);
+        if (dayInWeek < localTeamDay) {
+            d.add(localTeamDay-dayInWeek+1,"days");            
+        }
+        else if (dayInWeek > localTeamDay) {
+            d.subtract(dayInWeek-localTeamDay-1,"days");            
+        }
 
-        let dateStr = parts[2] + "" + parts[1] + "" + parts[0] + "T";
-
+        let dateStr = d.format("YYYYMMDDT");
+   
         return dateStr;
     },
 
@@ -36,9 +115,9 @@ const iCalendarGeneration = {
     /*
     * write a match event to ics file
     */
-    getMatchEvent: function (match,team) {
+    writeMatchEvent: function (calFile,match,teams, team) {
         fs.appendFileSync(calFile, "\r\nBEGIN:VEVENT\r\n");
-        let date = this.getMatchDate(match,team);
+        let date = this.getMatchDate(match,teams);
         fs.appendFileSync(calFile, "DTSTART:" + date + "203000Z\r\n");
         fs.appendFileSync(calFile, "DTEND:" + date + "220000Z\r\n");
         let lbl = this.getMatchLabel(match,team);
@@ -50,7 +129,7 @@ const iCalendarGeneration = {
     /*
     * write ics file for a team
     */
-    writeCalendar: function (matches, group, team) {
+    writeCalendar: function (matches, group,teams, team) {
 
         let calFile = "calendars/" + group + "/" + team.Name.replace(" ", "").toLocaleLowerCase() + ".ics"
 
@@ -70,8 +149,8 @@ const iCalendarGeneration = {
         fs.appendFileSync(calFile, "VERSION:2.0\r\n");
         for (let l = 0; l < matches.length; l++) {
             let m = matches[l];
-            if (m.local == team || m.remote == team) {
-                this.getMatchEvent(m,team);
+            if (m.local == team.Name || m.remote == team.Name) {
+                this.writeMatchEvent(calFile, m,teams, team);
             }
         }
         fs.appendFileSync(calFile, "END:VCALENDAR\r\n");
@@ -95,10 +174,9 @@ const scrapper = {
         let object = {}
 
         let chs = node.childNodes;
-
+        let k = 0;
         for (let j = 0; j < chs.length; j++) {
-            let child = chs[j];
-            let k = 0;
+            let child = chs[j];            
             if (child.type == "tag" && child.name == tagName) {
                 if (mapping["" + k] !== undefined) {
                     if (child.childNodes[0] != undefined && child.childNodes[0] != null) {
@@ -135,21 +213,32 @@ const scrapper = {
 
 const fsgtScrapper = {
 
-
-    getTeamDay : function(teamName) {
-        let teamId = teamName.replace(" ", "-").toLocaleLowerCase()
-        let url = team_url_schema+"/"+teamId;
-
+    getTeamDay: function (team) {
+        let url = "http://t2t.29.fsgt.org/equipe/" + team.replace(" ", "-").toLowerCase();
         let res = request("GET", url);
+        let day = "";
 
         if (res.statusCode == 200) {
-            //let html = res.getBody();
+            let html = res.getBody();
 
-            return "someday";
-        }    
-        return "never";
+            var content = Utf8ArrayToStr(html)
+
+            let i = content.indexOf("Reçoit le ");
+            if (i > 0) {                
+                content = content.substring(i);
+                i = content.indexOf("<");
+                content = content.substring(0, i);
+                content = content.trim().replace(".", "");
+                let words = content.split(" ");
+
+                day = words[words.length - 1];
+            }
+        }
+        return day;
 
     },
+
+   
 
     /*
     * get the teams
@@ -235,7 +324,7 @@ let downloadGroup = function (group) {
         let matchArray = fsgtScrapper.getMatches(html);
 
         for (let t = 0; t < teams.length; t++) {
-            iCalendarGeneration.writeCalendar(matchArray, group, teams[t]);
+            iCalendarGeneration.writeCalendar(matchArray, group,teams, teams[t]);
         }
 
     }
