@@ -1,0 +1,8 @@
+{
+  "name": "FSGT 29 calendars generator",
+  "description": "application de génération de calendar pour la FSGT 29 TT",
+  "repository": "",
+  "logo": "http://t2t.29.fsgt.org/t2t/files/logofsgt29.png",
+  "keywords": ["node", "express", "heroku"],
+  "image": "heroku/nodejs"
+}

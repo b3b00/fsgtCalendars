@@ -7,7 +7,9 @@ const PORT = process.env.PORT || 5000
  const GetCalendar = function(request, response, next) {
   var group = request.params.group;
   var team = request.params.team;
-  calendars.downloadGroup(group,team);
+  let ics = calendars.GetCalendar(group,team);
+  response.set('Content-Type', 'text/calendar')
+  response.send(ics);
 }
 
 express()
