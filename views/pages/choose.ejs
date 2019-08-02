@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>GST 29 TT calendars</title>  
+</head>
+<script>
+changeGroup = function(group) {
+  teamsByGroup =  <%-JSON.stringify(teamsByGroup)%>
+  teams = document.getElementById("teams");
+  groups = document.getElementById('groups');
+  teamList = teamsByGroup[groups.value];
+
+  count = teams.options.length;
+  for (i = 0 ; i < count ; i++) { 
+    teams.options[i];
+  }
+
+  for (var i=0; i<teamList.length; i++) {
+        newOption = document.createElement("option"); 
+        newOption.value = teamList[i].Name;  
+        newOption.text=teamList[i].Name;
+        try { 
+            teams.add(newOption); 
+            } 
+        catch (e) { 
+            teams.appendChild(newOption);
+            } 
+    }
+
+}
+
+function download() {
+  teams = document.getElementById("teams");
+  groups = document.getElementById('groups');
+
+  group = groups.value;
+  team = teams.value;
+  shortTeam = team != null ? team.replace(" ", "").toLocaleLowerCase() : "";
+  if (shortTeam == "" || group == "") {
+    window.alert("vous devez d'abord choisir un group et une équipe !");
+    return;
+  }
+  downloader = document.getElementById("downloader");
+  downloader.src=`/calendars/${group}/${shortTeam}`;
+  console.log(`download ${group} - ${shortTeam}`)
+}
+
+</script>
+<body>
+
+<iframe id="downloader" style="visibility: hidden"></iframe>
+
+<div class="jumbotron text-center">
+  <div class="container">
+    
+    <h1>charger votre calendrier FSGT  TT 29</h1>
+    <label for="groups">Groupes : </label>
+    <select id="groups" onchange="changeGroup();">
+      <option value="">Sélectionner un groupe</option>
+    <% for (let group of groups) { %>
+      <option value="<%=group%>"><%=group%></option>
+    <% } %>
+    </select>
+    <br><br>
+    <label for="teams">équipe :</label>
+    <select id="teams">      
+      <option value="">Sélectionner une équipe</option>
+    </select><br><br>
+    <button onclick="download();">télécharger le calendrier</button>
+    
+  </div>
+</div>
+
+
+
+</body>
+</html>

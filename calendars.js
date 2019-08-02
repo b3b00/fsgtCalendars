@@ -244,7 +244,7 @@ const scrapper = {
   }
 };
 
-const fsgtScrapper = {
+ const fsgtScrapper = {
   getTeamDay: function(team) {
     let url =
       "http://t2t.29.fsgt.org/equipe/" + team.replace(" ", "-").toLowerCase();
@@ -277,6 +277,9 @@ const fsgtScrapper = {
   /*
    * get the teams
    */
+
+   
+
   getTeams: function(html) {
     let teamNames = scrapper.etxractdataFromNodeArray(
       html,
@@ -292,6 +295,28 @@ const fsgtScrapper = {
     }
 
     return teams;
+  },
+
+  getTeamsByGroup: function(groups) {
+    let teamsGrouped = {};
+    for (let i = 0; i < groups.length; i++) {
+      console.log(`get group [${groups[i]}]`)
+      let url = groupe_url_schema + "-" + groups[i];
+
+      if (groups[i] == "a") {
+        url = groupe_url_schema;
+      }
+
+      let res = request("GET", url);
+
+      if (res.statusCode == 200) {
+        let html = res.getBody();
+
+        let teams = fsgtScrapper.getTeams(html);
+        teamsGrouped[groups[i]] = teams;        
+      }      
+    }
+    return teamsGrouped;
   },
 
   extractMatchFromRow: function(row) {
@@ -339,6 +364,8 @@ const fsgtScrapper = {
  */
 
 let groups = ["a", "b", "c", "d", "e", "f", "g"];
+
+module.exports.scrapper = fsgtScrapper;
 
 module.exports.GetCalendar = function(group, team) {
   let url = groupe_url_schema + "-" + group;
@@ -396,3 +423,4 @@ module.exports.GetCalendar = function(group, team) {
     }
   };
 };
+

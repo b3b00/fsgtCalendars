@@ -12,10 +12,16 @@ const PORT = process.env.PORT || 5000
   response.send(ics);
 }
 
+const index = function(request,response,next) {
+  const groups = ["a", "b"];//, "c", "d", "e", "f", "g"];
+  const teamsByGroup = calendars.scrapper.getTeamsByGroup(groups);  
+  response.render('pages/choose.ejs',{"groups" : groups, "teamsByGroup" : teamsByGroup});
+}
+
 express()
   .use(express.static(path.join(__dirname, 'public')))
   .set('views', path.join(__dirname, 'views'))
   .set('view engine', 'ejs')
-  .get('/', (req, res) => res.render('pages/index'))
-  .get('/v1/calendars/:group/:team', GetCalendar)
+  .get('/', index)
+  .get('/calendars/:group/:team', GetCalendar)
   .listen(PORT, () => console.log(`Listening on ${ PORT }`))
