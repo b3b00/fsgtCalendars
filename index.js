@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000
 }
 
 const index = function(request,response,next) {
-  const groups = ["a", "b"];//, "c", "d", "e", "f", "g"];
+  const groups = ["a", "b", "c", "d", "e", "f", "g"];
   const teamsByGroup = calendars.scrapper.getTeamsByGroup(groups);  
   response.render('pages/choose.ejs',{"groups" : groups, "teamsByGroup" : teamsByGroup});
 }
