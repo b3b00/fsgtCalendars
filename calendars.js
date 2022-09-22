@@ -65,17 +65,17 @@ const iCalendarGeneration = {
   getMatchLabel: function(match, team) {
     if (match.local == team.Name) {
       return (
-        match.day.replace("\t", "") +
+        "FSGT : "+(match.day.replace("\t", "") +
         " " +
         match.remote.replace("\t", "") +
-        " (dom.)"
+        " (dom.)")
       );
     } else {
       return (
-        match.day.replace("\t", "") +
+        "FSGT : "+(match.day.replace("\t", "") +
         " " +
         match.local.replace("\t", "") +
-        " (ext.)"
+        " (ext.)")
       );
     }
   },
@@ -247,7 +247,7 @@ const scrapper = {
  const fsgtScrapper = {
   getTeamDay: function(team) {
     let url =
-      "http://t2t.29.fsgt.org/equipe/" + team.replace(" ", "-").toLowerCase();
+      "http://t2t.29.fsgt.org/equipe/" + team.replace(/ /g, "-").toLowerCase();
     let res = request("GET", url);
     let day = "";
 
@@ -300,7 +300,6 @@ const scrapper = {
   getTeamsByGroup: function(groups) {
     let teamsGrouped = {};
     for (let i = 0; i < groups.length; i++) {
-      console.log(`get group [${groups[i]}]`)
       let url = groupe_url_schema + "-" + groups[i];
 
       if (groups[i] == "a") {
